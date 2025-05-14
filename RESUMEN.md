@@ -43,3 +43,13 @@ Sigue las instrucciones detalladas en el archivo [`INSTRUCCIONES.md`](./INSTRUCC
 Por razones legales, la ROM de *Mortal Kombat II* **no está incluida en el repositorio**.  
 Sin embargo, puede encontrarse fácilmente en comunidades como Reddit (ej. megathreads de ROMs) o en sitios de preservación como Internet Archive.
 
+##  Integrantes responsables del desarrollo de los agentes
+
+###  Aprendizaje Evolutivo
+- **Luciano Argomedo**  
+- **Walter Zárate**
+
+###  Aprendizaje por Refuerzo
+- **Angie Ramírez**  
+- **Constanza Cristinich**
+
