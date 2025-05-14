@@ -40,8 +40,7 @@ Sigue las instrucciones detalladas en el archivo [`INSTRUCCIONES.md`](./INSTRUCC
 
 ## ¿Dónde está el juego?
 
-Por razones legales, la ROM de *Mortal Kombat II* **no está incluida en el repositorio**.  
-Sin embargo, puede encontrarse fácilmente en comunidades como Reddit (ej. megathreads de ROMs) o en sitios de preservación como Internet Archive.
+Por razones legales, la ROM de *Mortal Kombat II* **no está incluida en el repositorio**. Sin embargo, puede encontrarse fácilmente en comunidades como Reddit (ej. megathreads de r/Roms). *Consideraciones adicionales de detallan en el archivo de instrucciones*
 
 ##  Integrantes responsables del desarrollo de los agentes
 
