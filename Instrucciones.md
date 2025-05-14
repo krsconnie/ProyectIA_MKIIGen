@@ -65,7 +65,8 @@ python3 -m retro.import ./ Ubicación del archivo(path) /
 
 Esto procesará el archivo y lo copiará al directorio interno de integración, siempre que el hash del ROM coincida con el esperado.
 
-** Si esto no funciona, intenta descomprimir el .zip e intentarlo denuevo con el archivo .md, si esto tampoco funciona renombra el archivo y cambiale la extensión a .gen **
+**Si esto no funciona**, intenta descomprimir el .zip e intentarlo denuevo con el archivo .md, si esto tampoco funciona renombra el archivo y cambiale la extensión a .gen 
+
 ---
 
 4. Verificar si el juego se importó:
