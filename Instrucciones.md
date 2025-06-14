@@ -57,7 +57,7 @@ pip3 install stable-retro
 
 3. Importar el ROM a stable Retro
 
-Desde la terminal asegurate de estar ubicado en stable-retro/data/retro/stable/MortalKombatII-Genesis y ejecuta:
+Desde la terminal asegurate de estar ubicado en stable-retro/retro/data/stable/MortalKombatII-Genesis y ejecuta:
 
 ```bash
 python3 -m retro.import ./ Ubicación del archivo(path) /
