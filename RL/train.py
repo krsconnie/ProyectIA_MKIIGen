@@ -3,10 +3,14 @@ import multiprocessing
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.callbacks import CheckpointCallback
+from torch.utils.tensorboard import SummaryWriter
 from mk_env import MortalKombatEnv
+from stable_baselines3.common.callbacks import CallbackList
+from reward_logger_callback import RewardLoggerCallback
+from datetime import datetime
 
 def main():
-    num_procesos = min(multiprocessing.cpu_count(), 2)
+    num_procesos = min(multiprocessing.cpu_count(), 1)
     print(f"Usando {num_procesos} procesos para entrenar...")
 
     # Crear carpetas si no existen
@@ -22,6 +26,7 @@ def main():
 
     # Ruta del modelo base
     model_path = "ppo_mk_model"
+    log_name = datetime.now().strftime("PPO_%d-%m___%H-%M")
 
     if os.path.exists(f"{model_path}.zip"):
         print("📦 Cargando modelo base existente con nuevos hiperparámetros...")
@@ -57,17 +62,19 @@ def main():
 
     # Callback para checkpoints
     checkpoint_callback = CheckpointCallback(
-        save_freq=10_000,
+        save_freq=100_000,
         save_path=checkpoint_dir,
         name_prefix="ppo_mk_checkpoint"
     )
+    reward_logger_callback = RewardLoggerCallback()
+    callback_list = CallbackList([checkpoint_callback, reward_logger_callback])
 
     print("🚀 Comenzando entrenamiento...")
     model.learn(
-        total_timesteps=1_000_000,
-        callback=checkpoint_callback,
-        tb_log_name="run",
-        reset_num_timesteps=False
+        total_timesteps=5_000*num_procesos,
+        callback=callback_list,
+        reset_num_timesteps=False,
+        tb_log_name=log_name
     )
 
     # Guardar modelo final

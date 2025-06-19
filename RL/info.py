@@ -1,7 +1,7 @@
 import gym
 import retro
 
-env = retro.make(game='MortalKombatII-Genesis', players=1, use_restricted_actions=retro.Actions.ALL)
+env = retro.make(game='MortalKombatII-Genesis', players=1)
 obs,_ = env.reset()
 
 print("Observación:", type(obs), obs.shape)
