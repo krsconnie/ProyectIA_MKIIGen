@@ -1,12 +1,12 @@
 [NEAT]
 fitness_criterion     = max
 fitness_threshold     = 5000
-pop_size              = 50
+pop_size              = 10
 reset_on_extinction   = False
 
 [DefaultGenome]
 num_inputs            = 7056
-num_outputs           = 12
+num_outputs           = 10
 num_hidden            = 0
 feed_forward          = True
 

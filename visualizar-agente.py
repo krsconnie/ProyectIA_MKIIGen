@@ -47,7 +47,7 @@ def jugar_con_agente(config_file, genoma_file):
         frame_count += 1
 
     env.close()
-    print(f"\n🏁 Partida terminada | Recompensa total: {total_reward} | Cuadros jugados: {frame_count}")
+    print(f"\n Partida terminada | Recompensa total: {total_reward} | Cuadros jugados: {frame_count}")
 
 if __name__ == "__main__":
     jugar_con_agente("config-neat", "mejor_agente.pkl")
