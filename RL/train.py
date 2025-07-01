@@ -3,6 +3,7 @@ import multiprocessing
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.callbacks import CheckpointCallback
+from stable_baselines3.common.env_checker import check_env
 from torch.utils.tensorboard import SummaryWriter
 from mk_env import MortalKombatEnv
 from stable_baselines3.common.callbacks import CallbackList
@@ -10,6 +11,9 @@ from reward_logger_callback import RewardLoggerCallback
 from datetime import datetime
 
 def main():
+    # Verifica el entorno personalizado
+    #check_env(MortalKombatEnv(), warn=True)
+
     num_procesos = min(multiprocessing.cpu_count(), 1)
     print(f"Usando {num_procesos} procesos para entrenar...")
 
@@ -20,9 +24,12 @@ def main():
     env = SubprocVecEnv([lambda: MortalKombatEnv() for _ in range(num_procesos)])
 
     # Hiperparámetros ajustables
-    learning_rate = 2e-4
-    ent_coef = 0.01
-    clip_range = 0.2
+    learning_rate = 2e-4          
+    ent_coef = 0.015               # más entropía = más exploración (útil para agresividad)
+    clip_range = 0.15             # más conservador para evitar updates inestables
+    gamma = 0.99                  # descuento normal (puede bajarse un poco si quieres decisiones más inmediatas)
+    gae_lambda = 0.95             # acorta la ventaja, puede ayudar si la señal es muy variable
+    vf_coef = 0.4 
 
     # Ruta del modelo base
     model_path = "ppo_mk_model"
@@ -41,6 +48,9 @@ def main():
             learning_rate=learning_rate,
             ent_coef=ent_coef,
             clip_range=clip_range,
+            gamma = gamma,             
+            gae_lambda = gae_lambda, 
+            vf_coef = vf_coef,
             verbose=1,
             tensorboard_log="./tensorboard_logs/"
         )
@@ -56,6 +66,9 @@ def main():
             learning_rate=learning_rate,
             ent_coef=ent_coef,
             clip_range=clip_range,
+            gamma = gamma,
+            gae_lambda = gae_lambda, 
+            vf_coef = vf_coef,
             verbose=1,
             tensorboard_log="./tensorboard_logs/"
         )
@@ -71,7 +84,7 @@ def main():
 
     print("🚀 Comenzando entrenamiento...")
     model.learn(
-        total_timesteps=5_000*num_procesos,
+        total_timesteps=500_000*num_procesos,
         callback=callback_list,
         reset_num_timesteps=False,
         tb_log_name=log_name
