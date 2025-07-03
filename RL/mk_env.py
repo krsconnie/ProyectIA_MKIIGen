@@ -7,7 +7,8 @@ from gymnasium import spaces
 class MortalKombatEnv(gym.Env):
     def __init__(self, resize_shape=(64, 64), n=4):
         super().__init__()
-        self.env = retro.make(game='MortalKombatII-Genesis', players=1, scenario='scenario')
+        #render_mode = False
+        self.env = retro.make(game='MortalKombatII-Genesis', state = 'VeryEasy.LiuKang-03' , players=1, scenario='scenario')
         
         # Inicialización del entorno y del procesamiento
         self.resize_shape = resize_shape
@@ -23,12 +24,21 @@ class MortalKombatEnv(gym.Env):
         self.last_step_action = None
         self.last_step_info = None
         self.acciones_repetidas = 0
+        self.combo_golpes_consecutivos = 0
         self.p1_health_anterior = 120
         self.p2_health_anterior = 120
         self.distancia_anterior = 103  # Distancia de inicio
 
         # Parámetros para stochastic frame skip
         self.n = n
+
+        # Parámetros para estadísticas
+        self.efective_attack_steps = 0
+        self.efective_block_steps = 0
+        self.total_steps = 0
+        self.steps_cerca_del_enemigo = 0
+        self.damage_to_player_steps = 0
+
 
     # Método para procesar el cambio de tamaño de la imagen
     def preprocess(self, obs):
@@ -37,7 +47,7 @@ class MortalKombatEnv(gym.Env):
 
     # Método de reset del entorno y las variables de recompensa
     def reset(self, seed=None, options=None):
-        print("RESEEEEEEEEET")
+        #print("RESEEEEEEEEET")
         obs, info = self.env.reset()
         
         # Tiempo de espera para la intro de batalla del juego
@@ -52,16 +62,26 @@ class MortalKombatEnv(gym.Env):
         self.last_step_action = None
         self.last_step_info = info
         self.acciones_repetidas = 0
+        self.combo_golpes_consecutivos = 0
         self.p1_health_anterior = 120
         self.p2_health_anterior = 120
         x = info.get('x_position', 0)
         x_enemy = info.get('enemy_x_position', 0)
         self.distancia_anterior = abs(x - x_enemy) - 45  #La distancia min entre jugadores es de 45
 
+        # Reset de parámetros para estadísticas
+        self.efective_attack_steps = 0
+        self.efective_block_steps = 0
+        self.total_steps = 0
+        self.steps_cerca_del_enemigo = 0
+        self.damage_to_player_steps = 0
+
         return obs, info
 
 
     def step(self, action):
+
+        #action = action[:12]
 
         terminated = False
         truncated = False
@@ -74,6 +94,8 @@ class MortalKombatEnv(gym.Env):
 
             if terminated or truncated:
                 break
+
+        self.total_steps += 1
 
         # Obtención de variables actuales
         p1_health_actual = info.get('health', self.p1_health_anterior)
@@ -91,47 +113,55 @@ class MortalKombatEnv(gym.Env):
         # Movement_buttons = UP, DOWN, LEFT, RIGHT
         movement_buttons = [4, 5, 6, 7]
 
-        # Por cada step que genere daño, recompensa del daño hecho + 10 
-        # (minimo daño posible es 5, maximo asumimos que 30) por 3
+        # Por cada step que genere daño, recompensa base de 0.2 más combo bonus
         if damage_to_Enemy > 0:
-            #print(f"ATAQUE NUESTRO :D {((damage_to_Enemy + 10)*3)}")
-            reward += ((damage_to_Enemy + 10)*3) #Rango de 45 a 120        #/ 100 # Rango de 0.45 a 1.2
+            self.combo_golpes_consecutivos += 1
+            bonus_combo = min(0.05 * self.combo_golpes_consecutivos, 0.15)
+            reward += 0.35 + bonus_combo + (damage_to_Enemy/120)
+            self.efective_attack_steps += 1
+        else:
+            self.combo_golpes_consecutivos = 0
 
-        # Por cada step en que reciba daño, descuento de 20. Si bloquea, solo se le descuenta 15
+        # Por cada step en que reciba daño, descuento de 0.3. Si bloquea, solo se le descuenta 0.2
         if damage_to_Player > 0:
-            #print(f"ATAQUE ENEMIGO D: {-(damage_to_Player + 10)}")
-            reward -= (damage_to_Player + 10)
+            self.damage_to_player_steps += 1
+            reward -= 0.06 + (damage_to_Player/120)
             if any(action[i] for i in block_buttons):
-                #print("BLOQUEO, +5")
-                reward += 5
+                reward += 0.02
+                self.efective_block_steps += 1
 
-        # Si golpea, se le recompensa un poco aunque no genere daño, pero debe estar a una distancia de 45
-        if any(action[i] for i in (attack_buttons)) and distancia_actual <= 10:
-            print("RRECOMPENSA POR ATACAR EN CUALQUIER MOMENTO")
-            reward += 1
+        # Si golpea, se le recompensa un poco aunque no genere daño, pero debe estar a una distancia de 15
+        if any(action[i] for i in (attack_buttons)) and distancia_actual <= 15 and p1_health_actual == self.p1_health_anterior:
+            #print("RECOMPENSA POR ATACAR EN CUALQUIER MOMENTO: 0.01")
+            reward += 0.03
         
         # Si el jugador se acerca al oponente, se le recompensa
         if distancia_actual <= self.distancia_anterior:
-            if x < x_enemy and action[7] == 1 or x > x_enemy and action[6] == 1:
-                reward += (self.distancia_anterior - distancia_actual) * 0.02 #El cambio de distancias max es desde 199 a 0, lo cual da recompensa max de 7.96
-                #print(f"RECOMPENSA POR ACERCARSE {(self.distancia_anterior - distancia_actual) * 0.02}")
+            if (x < x_enemy and action[7] == 1) or (x > x_enemy and action[6] == 1):
+                #print(f"Recompensa por acercase {(self.distancia_anterior - distancia_actual) * 0.0025}")
+                reward += (self.distancia_anterior - distancia_actual) * 0.002 #El cambio de distancias max es desde 199 a 0, lo cual da recompensa max de 0.199
         
         # Si el jugador se aleja del oponente, sin intensión de apartarse de golpes, se le castiga 
         else:
-            if self.p1_health_anterior == p1_health_actual:
-                reward -= (distancia_actual - self.distancia_anterior) * 0.025
-                #print(f"DESRECOMPENSA POR ALEJARSE {(distancia_actual - self.distancia_anterior) * -0.025}")
+            if self.p1_health_anterior == p1_health_actual and ((x < x_enemy and action[6] == 1) or (x > x_enemy and action[7] == 1)):
+                #print(f"Castigo por alejarse {(distancia_actual - self.distancia_anterior) * -0.002}")
+                reward -= (distancia_actual - self.distancia_anterior) * 0.0018 #El cambio de distancias max es desde 199 a 0, lo cual da recompensa max de 0.2985
 
-        # Si el personaje solo repite las mismas acciones y no produce ningún efecto, entonces será castigado tras una serie de ellos
-        if any(action[i] for i in (movement_buttons)) and not any(action[i] for i in attack_buttons) and damage_to_Enemy == 0:
-            self.acciones_repetidas += 1
-        else:
-            self.acciones_repetidas = 0
+        # Si el personaje solo repite las mismas acciones y no produce ningún efecto, entonces será castigado tras una serie 
+        # de ellos. Se considerará solo si al personaje no se le hace daño, ya que puede estar inmovil debido a los golpes
+        if p1_health_actual == self.p1_health_anterior:
+            if any(action[i] for i in (movement_buttons)) and damage_to_Enemy == 0:
+                self.acciones_repetidas += 1
+            else:
+                self.acciones_repetidas = 0
 
-        if self.acciones_repetidas >= 5:
-            reward -= 5 * (self.acciones_repetidas - 4)
-            print("DESRECOMPENSA POR PASIVO")
+            if self.acciones_repetidas >= 30:
+                reward -= min(0.05 * (self.acciones_repetidas - 29), 0.4)
+                #print(f"CASTIGO POR PASIVOOOO {-0.03 * (self.acciones_repetidas - 29)}")
         
+        if distancia_actual < 5:
+            self.steps_cerca_del_enemigo += 1
+
         # Actualización de varibles anteriores
         self.p1_health_anterior = p1_health_actual
         self.p2_health_anterior = p2_health_actual
@@ -140,14 +170,23 @@ class MortalKombatEnv(gym.Env):
         self.last_step_info = info
         
         if terminated or truncated:
-                print(f"p1 = {p1_health_actual}, p2 ={p2_health_actual}")
+                #
+                # print(f"p1 = {p1_health_actual}, p2 ={p2_health_actual}")
                 #Personaje perdió
                 if p1_health_actual <= 0:
-                    reward -= 100
+                    reward -= 1
+                #Personaje ganó
                 if p2_health_actual <= 0:
-                    reward += 200
+                    reward += 1
     
-        print(f"REWARD: {reward}")
+        #print(f"REWARD: {reward}")
+
+        info["efective_attack_steps"] = self.efective_attack_steps
+        info["efective_block_steps"] = self.efective_block_steps
+        info["total_steps"] = self.total_steps
+        info["steps_cerca_del_enemigo"] = self.steps_cerca_del_enemigo
+        info["damage_to_player_steps"] = self.damage_to_player_steps
+
 
         done = terminated or truncated
         return obs, reward, done, False, info
