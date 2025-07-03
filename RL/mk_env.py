@@ -7,8 +7,10 @@ from gymnasium import spaces
 class MortalKombatEnv(gym.Env):
     def __init__(self, resize_shape=(64, 64), n=4):
         super().__init__()
-        #render_mode = False
-        self.env = retro.make(game='MortalKombatII-Genesis', state = 'VeryEasy.LiuKang-03' , players=1, scenario='scenario')
+        self.posibles_estados = [f"VeryEasy.LiuKang-{i:02d}" for i in range(2, 4)]
+        self.env = None
+        self._crear_nuevo_env()
+        
         
         # Inicialización del entorno y del procesamiento
         self.resize_shape = resize_shape
@@ -39,6 +41,15 @@ class MortalKombatEnv(gym.Env):
         self.steps_cerca_del_enemigo = 0
         self.damage_to_player_steps = 0
 
+    def _crear_nuevo_env(self):
+        estado_random = np.random.choice(self.posibles_estados)
+        self.env = retro.make(
+            game='MortalKombatII-Genesis',
+            state=estado_random,
+            players=1,
+            scenario='scenario'
+            ,render_mode = False
+        )
 
     # Método para procesar el cambio de tamaño de la imagen
     def preprocess(self, obs):
@@ -48,8 +59,15 @@ class MortalKombatEnv(gym.Env):
     # Método de reset del entorno y las variables de recompensa
     def reset(self, seed=None, options=None):
         #print("RESEEEEEEEEET")
+        # Cierra el entorno anterior si existe
+        if self.env:
+            self.env.close()
+
+        # Crear nuevo estado aleatorio
+        self._crear_nuevo_env()
+
         obs, info = self.env.reset()
-        
+
         # Tiempo de espera para la intro de batalla del juego
         for _ in range(175):
             obs, _, terminated, truncated, info = self.env.step(self.action_space.sample())

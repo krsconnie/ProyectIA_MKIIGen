@@ -21,7 +21,7 @@ def main():
     env = SubprocVecEnv([lambda: MortalKombatEnv() for _ in range(num_procesos)])
 
     model_path = "ppo_mk_model"
-    log_name = datetime.now().strftime("PPO_%d-%m___%H-%M_MAPAS_ALEATORIOS")
+    log_name = datetime.now().strftime("PPO_%d-%m___%H-%M_(2_MAPAS_ALEATORIOS)")
 
     if os.path.exists(f"{model_path}.zip"):
         print("Cargando modelo base existente y continuando entrenamiento...")
@@ -52,7 +52,7 @@ def main():
 
     print("Comenzando entrenamiento...")
     model.learn(
-        total_timesteps= 200_000 * num_procesos,
+        total_timesteps= 500_000 * num_procesos,
         callback=callback_list,
         reset_num_timesteps=False,
         tb_log_name=log_name
