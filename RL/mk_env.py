@@ -27,6 +27,7 @@ class MortalKombatEnv(gym.Env):
         self.last_step_info = None
         self.acciones_repetidas = 0
         self.combo_golpes_consecutivos = 0
+        self.steps_estatico = 0
         self.p1_health_anterior = 120
         self.p2_health_anterior = 120
         self.distancia_anterior = 103  # Distancia de inicio
@@ -48,7 +49,7 @@ class MortalKombatEnv(gym.Env):
             state=estado_random,
             players=1,
             scenario='scenario'
-            ,render_mode = False
+            #,render_mode = False
         )
 
     # Método para procesar el cambio de tamaño de la imagen
@@ -77,6 +78,7 @@ class MortalKombatEnv(gym.Env):
         obs = self.preprocess(obs)
 
         # Reset de las variables
+        self.steps_estatico = 0
         self.last_step_action = None
         self.last_step_info = info
         self.acciones_repetidas = 0
@@ -175,7 +177,20 @@ class MortalKombatEnv(gym.Env):
 
             if self.acciones_repetidas >= 30:
                 reward -= min(0.05 * (self.acciones_repetidas - 29), 0.4)
-                #print(f"CASTIGO POR PASIVOOOO {-0.03 * (self.acciones_repetidas - 29)}")
+                print(f"Castigo por pasivo {-min(0.05 * (self.acciones_repetidas - 29), 0.4)}")
+
+        # Si el personaje se queda en el mismo sitio por mucho tiempo, sin que le hagan daño, 
+        # tendrá que moverse o será castigado. Con esto se busca corregir el comportamiento de quedarse pegado al fondo del mapa
+        # Saltando y golpeando al enemigo (Forma fácil de ganarle, ya que las otras IAs no son tan inteligentes para defenderse ahí)
+        if p1_health_actual == self.p1_health_anterior:
+            if self.last_step_info.get('x_position', 0) == x:
+                self.steps_estatico += 1
+            else:
+                print(f"Castigo por estático: 0")
+                self.steps_estatico = 0
+            if self.steps_estatico >= 25:
+                reward -= min(0.03 * (self.steps_estatico - 24), 0.3)
+                print(f"Castigo por estático: {-min(0.03 * (self.steps_estatico - 24), 0.3)}")
         
         if distancia_actual < 5:
             self.steps_cerca_del_enemigo += 1
