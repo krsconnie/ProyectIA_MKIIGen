@@ -2,7 +2,9 @@ import cv2
 import sys
 import os
 import numpy as np
-from . import config
+import lifes_laws.config as config
+import threading
+import neat
 
 """
 Reajusta el tamaño de la imagen a 84 x 84, para que sea más liviana de procesar.
@@ -80,7 +82,21 @@ def ask_config():
             NOMBRE_MEJOR_AGENTE = config.NOMBRE_MEJOR_AGENTE
             CARPETA_CHECKPOINTS = config.CARPETA_CHECKPOINTS
             CARGAR_CHECKPOINT   = config.CARGAR_CHECKPOINT
-
+            if CARGAR_CHECKPOINT:
+                os.makedirs(CARPETA_CHECKPOINTS, exist_ok=True)
+                archivos = sorted([f for f in os.listdir(CARPETA_CHECKPOINTS) if f.startswith("generacion-")])
+                if archivos:
+                    for i, f in enumerate(archivos):
+                        print(f"{i}. {f}")
+                    try:
+                        idx = int(input("Selecciona la generación a cargar: "))
+                        CARGAR_CHECKPOINT = True
+                        CHECKPOINT = archivos[idx]
+                    except Exception as e:
+                        print("Error al cargar checkpoint.", e)
+                        sys.exit(1)
+                else:
+                    print("No hay checkpoints disponibles. Se empezará desde cero.")
         elif default == "n":
             GENERACIONES = -1
             while GENERACIONES < 1:
@@ -107,6 +123,33 @@ def ask_config():
                         print("⚠️ Ingrese un valor valido.")
                 except ValueError:
                     print("El valor debe ser un numero natural.")
+
+            CANTIDAD_MAPAS_A_ENTRENAR = -1
+            while CANTIDAD_MAPAS_A_ENTRENAR < 1:
+                try:
+                    CANTIDAD_MAPAS_A_ENTRENAR = input("¿Cuántos mapas quieres entrenar? (>0, 'd' para default): ")
+                    if CANTIDAD_MAPAS_A_ENTRENAR == 'd':
+                        CANTIDAD_MAPAS_A_ENTRENAR = config.CANTIDAD_MAPAS_A_ENTRENAR
+                        continue
+                    CANTIDAD_MAPAS_A_ENTRENAR = int(CANTIDAD_MAPAS_A_ENTRENAR)
+                    if CANTIDAD_MAPAS_A_ENTRENAR < 1:
+                        print("⚠️ Ingrese un valor valido.")
+                except ValueError:
+                    print("El valor debe ser un numero natural.")
+
+            FRAME_SKIP = -1
+            while FRAME_SKIP < 1:
+                try:
+                    FRAME_SKIP = input("¿Cuánto de frame skip quieres que haya? (>0, 'd' para default): ")
+                    if FRAME_SKIP == 'd':
+                        FRAME_SKIP = config.FRAME_SKIP
+                        continue
+                    FRAME_SKIP = int(FRAME_SKIP)
+                    if FRAME_SKIP < 1:
+                        print("⚠️ Ingrese un valor valido.")
+                except ValueError:
+                    print("El valor debe ser un numero natural.")
+
             
             
             NOMBRE_MEJOR_AGENTE = ""
@@ -159,3 +202,31 @@ def ask_config():
 
         print("🔝 Comenzando... Esto puede tardar unos segundos...")
         return (GENERACIONES, THREADS, NOMBRE_MEJOR_AGENTE, CARPETA_CHECKPOINTS, CARGAR_CHECKPOINT, CHECKPOINT)
+    
+
+
+class RenderRequestReporter(neat.reporting.BaseReporter):
+    def __init__(self):
+        pass
+
+    def start_generation(self, generation):
+        print(f"\n🧠 ¿Renderizar la generación {generation}? (s/n) [5s]: ", end="", flush=True)
+        config.RENDER_MODE = None
+
+        def get_input():
+            try:
+                answer = input()
+                if answer.strip().lower() == "s":
+                    config.RENDER_MODE = "human"
+                    print("✔️ Renderizando generación.")
+                else: 
+                    config.RENDER_MODE = None
+                    print("\n⏱️ Continuando sin render.")
+
+            except:
+                pass
+
+        thread = threading.Thread(target=get_input)
+        thread.daemon = True
+        thread.start()
+        thread.join(timeout=5)

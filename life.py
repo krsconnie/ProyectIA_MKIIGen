@@ -31,7 +31,8 @@ def let_there_be_life(config_file):
     # Reportes
     population.add_reporter(neat.StdOutReporter(True))
     population.add_reporter(neat.StatisticsReporter())
-    population.add_reporter(neat.Checkpointer(generation_interval=1, filename_prefix=f"{CARPETA_CHECKPOINTS}/generacion-"))
+    population.add_reporter(lifes_laws.RenderRequestReporter())
+    population.add_reporter(neat.Checkpointer(generation_interval=10, filename_prefix=f"{CARPETA_CHECKPOINTS}/generacion-"))
 
     pe = ParallelEvaluator(THREADS, lifes_laws.eval_genome)
 

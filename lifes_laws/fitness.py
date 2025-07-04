@@ -1,7 +1,8 @@
-from . import config as exe_config
+import lifes_laws.config as exe_config
 from . import tools
 import neat
 import retro
+import numpy as np
 import random
 
 """
@@ -12,10 +13,10 @@ def eval_genome(genome, config):
     avg_fitness = [0] * exe_config.CANTIDAD_MAPAS_A_ENTRENAR
 
     for i_escn in range(exe_config.CANTIDAD_MAPAS_A_ENTRENAR):
-        escenario = f"VeryEasy.LiuKang-{(i_escn + 2):02d}"
+        escenario = f"LiuKangVsLiuKang_VeryHard_06"
 
         env = retro.make(game='MortalKombatII-Genesis',state=escenario, render_mode=exe_config.RENDER_MODE)
-        obs, _ = env.reset()
+        obs, info = env.reset()
         net = neat.nn.FeedForwardNetwork.create(genome, config)
 
         INDICES_BOTONES = [env.buttons.index(b) for b in exe_config.BOTONES_USADOS]
@@ -34,8 +35,17 @@ def eval_genome(genome, config):
                 # 🔀 Acción aleatoria durante los primeros frames
                 action = env.action_space.sample()
             else:
+                max_x_pos = 320.0
+                max_y_pos = 224.0
+                pos_data = [
+                    info.get("x_position", 0) / max_x_pos,
+                    info.get("y_position", 0) / max_y_pos,
+                    info.get("enemy_x_position", 0) / max_x_pos,
+                    info.get("enemy_y_position", 0) / max_y_pos
+                ]
                 obs_processed = tools.preprocess(obs)
-                output = net.activate(obs_processed)
+                input_data = np.concatenate([obs_processed, pos_data])
+                output = net.activate(input_data)
 
                 action = [0] * len(env.buttons)
                 for i, idx in enumerate(INDICES_BOTONES):
@@ -58,10 +68,10 @@ def eval_genome(genome, config):
                 self_damage = max(0, last_player_health - player_health)
 
                 if enemy_damage != 0:
-                    avg_fitness[i_escn] += enemy_damage * 0.9
+                    avg_fitness[i_escn] += enemy_damage
 
-                if self_damage != 0:
-                    avg_fitness[i_escn] -= self_damage * 1.1
+                # if self_damage != 0:
+                #     avg_fitness[i_escn] -= self_damage * 1.1
 
                 last_enemy_health = enemy_health
                 last_player_health = player_health
@@ -69,10 +79,6 @@ def eval_genome(genome, config):
                 if info.get("rounds_won", 0) != 0 or info.get("enemy_rounds_won", 0) != 0:
                     done = True
                     break
-
-        # Penalización si se pasó del límite de frames
-        if frame_count >= max_frames:
-            avg_fitness[i_escn] = -132
 
         env.close()
 

@@ -1,0 +1,14 @@
+# Ignorar cachés de Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyc
+
+# Ignorar carpetas que comienzan con "generaciones"
+generaciones*/
+
+# (opcional) ignorar checkpoints si usás pickle o logs pesados
+*.pkl
+*.log
+*.npy
+*.npz
