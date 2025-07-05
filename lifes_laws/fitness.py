@@ -6,6 +6,23 @@ import numpy as np
 import random
 
 """
+Asigna el fitness
+"""
+def fitness_funtion(tiempo_vivo, combinaciones, total_botones, spam_penalty, repeticiones):
+
+    promedio_botones = total_botones / (tiempo_vivo/exe_config.FRAME_SKIP)
+
+    fitness = (
+        len(combinaciones)
+        + tiempo_vivo / (600/exe_config.FRAME_SKIP)
+        - spam_penalty
+        - repeticiones * 0.2
+        - promedio_botones * 0.05
+    )
+
+    return max(fitness, 0)  # evitamos fitness negativos
+
+"""
 De lo más importante del NEAT, la evaluacion de los genomas.
 """
 def eval_genome(genome, config):
@@ -34,6 +51,13 @@ def eval_genome(genome, config):
         warmup_frames = 200 # 15 frams despues de que pueden comenzar a pelear
         last_enemy_health = 120
         last_player_health = 120
+        acciones = []
+        combinaciones = set()
+        last_action = [0] * len(env.buttons)
+        total_botones = 0
+        spam_penalty = 0
+        repeticiones = 0
+        promedio_botones = 0
 
         while not done and frame_count < max_frames:
             if frame_count < warmup_frames:         # 🔀 Acción aleatoria durante los warmup_frames, para que el agente siempre este en distintas situaciones
@@ -59,6 +83,16 @@ def eval_genome(genome, config):
                 action = [0] * len(env.buttons)
                 for i, idx in enumerate(INDICES_BOTONES):
                     action[idx] = 1 if output[i] > 0.5 else 0
+                
+                suma = sum(action)
+                combinaciones.add(tuple(action))
+                acciones.append(action)
+                total_botones += suma
+                if suma > 3:
+                    spam_penalty += (suma - 3) * 0.1
+                if i > 0 and action == last_action:
+                    repeticiones += 1
+                last_action = action
 
             # Mantenemos la acción por la cantidad de frames indicada en FRAME_SKIP. Esto hace hasta (FRAME_SKIP - 1) veces más rapido el entrenamiento
             for _ in range(exe_config.FRAME_SKIP):
@@ -76,25 +110,8 @@ def eval_genome(genome, config):
 
                 enemy_damage = max(0, last_enemy_health - enemy_health)
                 self_damage = max(0, last_player_health - player_health)
-
-                ##################################################################################
-                ################################# Fitness adjust #################################
-                ##################################################################################
-
-                # La variable avg_fitness es un arreglo que contiene los fitness individuales de todos los mapas jugados.
-                # Es util para poder entrenar varios mapas y entregar el promedio de los resultados.
-                # Si solo se utiliza 1 mapa, entonces el fitness es equivalente a avg_fitness[0].
-                # Para recompenzar adecuadamente siempre asignara el fitness a avg_fitness[i_escn].
-
-                if enemy_damage != 0:
-                    avg_fitness[i_escn] += enemy_damage
                 
-                if self_damage != 0:
-                    avg_fitness[i_escn] -= self_damage
 
-                ##################################################################################
-                ##################################################################################
-                ##################################################################################
 
                 last_enemy_health = enemy_health
                 last_player_health = player_health
@@ -103,9 +120,13 @@ def eval_genome(genome, config):
                     done = True
                     break
 
+        
+
+        avg_fitness[i_escn] = fitness_funtion(frame_count - warmup_frames, combinaciones=combinaciones, total_botones=total_botones, repeticiones=repeticiones)
+
         env.close()
 
     genome.fitness = sum(avg_fitness) / len(avg_fitness)
-    fitness_range = (-120, 120) # Es ideal ajustar esto con el mínimo fitness posible y el máximo fitness posible, asi la representacion de los colores es fiel a la realidad.
+    fitness_range = (0, 1000) # Es ideal ajustar esto con el mínimo fitness posible y el máximo fitness posible, asi la representacion de los colores es fiel a la realidad.
     tools.print_genoma_eval(genome, avg_fitness, fitness_range)  
     return genome.fitness
