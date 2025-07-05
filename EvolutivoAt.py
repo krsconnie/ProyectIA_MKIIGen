@@ -17,12 +17,11 @@ import cv2
 import pickle
 import random
 
-# Botones a utilizar para el agente, se omiten botones MODE y START ya que no se usan para pelear
+# Botones a utilizar para el agente, se omiten botones MODE, X, Y, Z ya que no se usan para pelear
 # Los botones que se usan son los de abajo, el control de genesis PUEDE tener más botones, pero el mortal kombat,
 # está funcionando con el control básico, en este pdf salen los controles https://classicreload.com/sites/default/files/genesis-mortal-kombat-ii-Manual.pdf 
 BOTONES_USADOS = ['A', 'B', 'C', 'START', 'UP', 'DOWN', 'LEFT', 'RIGHT']
-#BOTONES_USADOS = ['Z','X']
-
+#BOTONES_USADOS = ['Y']
 # Esto sirve para procesar la imagen (los frames) y pueda ser interpretada
 def preprocess(obs):
     image = obs[0]
@@ -37,10 +36,14 @@ def preprocess(obs):
 
 # Evaluación del fitness de cada genoma
 def eval_genomes(genomes, config):
-    for genome_id, genome in genomes:
-        env = retro.make(game='MortalKombatII-Genesis')
-        obs = env.reset()[0]  # gymnasium retorna (obs, info)
+    for i, (genome_id, genome) in enumerate(genomes):
+        with open('archivo.txt', 'a') as archivo:
+            archivo.write(f"Iteración número {i} - Genoma ID: {genome_id}\n")
+        
+        env = retro.make(game='MortalKombatII-Genesis', state="Level1.LiuKangVsJax")
+        obs = env.reset()[0]
         net = neat.nn.FeedForwardNetwork.create(genome, config)
+
 
         # Mapeo de índices de botones usados
         INDICES_BOTONES = [env.buttons.index(b) for b in BOTONES_USADOS]
@@ -56,21 +59,34 @@ def eval_genomes(genomes, config):
         last_player_health = 120
 
 
-        # Aleatorizar un poco el inicio para romper simetrías. En entornos muy repetitivos (deterministas), el aprendizaje evolutivo puede teneder a repetir soluciones.
+        # Aleatorizar un poco el inicio para romper simetrías. En entornos muy repetitivos (deterministas), el aprendizaje evolutivo puede tender a repetir soluciones.
         # Con este ruido inicial, le da al agente un nuevo "escenario" en cada inicio de entrenamiento. 
         for _ in range(random.randint(5, 30)):
             obs, _, terminated, truncated, _ = env.step(env.action_space.sample())
             if terminated or truncated:
                 obs = env.reset()[0]
 
+        # Variables adicionales para recompensas más complejas
+        damage_buffer = []
+        frames_without_damage = 0
+
+        castigo_aplicado = False
+        ventana_frames = 180
+        frame_window_counter = 0
+        damage_acumulado_en_ventana = 0
+        penalizaciones_seguidas = 0
+        umbral_penalizaciones = 7
+
+
+
         # Mientras no esté listo y la cantidad de frames máximo no se haya superado, no estoy muy seguro como funciona lo de done, por eso
         # Agregue lo del or para ser específico cuando debe acabar
-        while not done and frame_count < max_frames or (info['enemy_rounds_won'] == 3) or (info['rounds_won'] == 3):
+        while not done and frame_count < max_frames:
             obs_processed = preprocess(obs)
             output = net.activate(obs_processed)
 
             # Resetear vector de acciones, el vector action tendrá valores entre 0 y 1, si es mayor a 0.5 se interpreta como que se presiona el botón.
-            #Esto implica que el agente puede presionar varios botones a la vez.
+            # Esto implica que el agente puede presionar varios botones a la vez.
             action = [0] * len(env.buttons)
             for i, idx in enumerate(INDICES_BOTONES):
                 action[idx] = 1 if output[i] > 0.5 else 0
@@ -81,16 +97,69 @@ def eval_genomes(genomes, config):
             enemy_damage = last_enemy_health - info['enemy_health']
             self_damage = last_player_health - info['health']
 
-            # Fitness: premia el daño hecho y penaliza daño recibido, recompesas básicas por ahora
-            fitness += enemy_damage * 2 - self_damage
+                # Condición adicional para finalizar al acabar el round
+            if info['enemy_health'] <= 0 or info['health'] <= 0:
+                print("Round terminado por muerte")
+                done = True
 
-            # Bonus por ganar rounds
-            fitness += info['rounds_won'] * 50
+            if info['rounds_won'] > 0 or info['enemy_rounds_won'] > 0:
+                print("Round terminado por tiempo")
+                done = True
+
+
+            frame_window_counter += 1
+            damage_acumulado_en_ventana += enemy_damage
+
+            if frame_window_counter >= ventana_frames:
+                if damage_acumulado_en_ventana > 0:
+                    fitness += damage_acumulado_en_ventana * ((damage_acumulado_en_ventana/ventana_frames)*10)
+                    if penalizaciones_seguidas > 0:
+                        penalizaciones_seguidas -= 1
+                    print("Recompensa asignada")
+                else:
+                    fitness -= 50
+                    print("Castigo asignado")
+                    penalizaciones_seguidas += 1
+                
+                # Reinicia para la próxima ventana
+                frame_window_counter = 0
+                damage_acumulado_en_ventana = 0
+
+            if (enemy_damage == 0) and (action[env.buttons.index('A')] or action[env.buttons.index('B')] or action[env.buttons.index('C')]):
+                fitness += 5  # Recompensa extra
+                print("BONUS: Hizo daño mientras presionaba A/B/C")
+
+            if self_damage > 0:
+                fitness -= self_damage
+                print(f"Castigo inmediato por recibir daño: -{self_damage}")
+
+            if enemy_damage > 0:
+                fitness += enemy_damage
+                print(f"Recompensa inmediata por hacer daño: {enemy_damage}")
+
+
+            # Early termination si se exceden penalizaciones
+            if penalizaciones_seguidas >= umbral_penalizaciones:
+                print("Early termination por penalizaciones excesivas")
+                done = True
+
+            last_enemy_health = info['enemy_health']
+            last_player_health = info['health']
 
             frame_count += 1
+            #print(info['enemy_health'])
+            #print(info['health'])
+            #print(info['enemy_rounds_won'])
+            #print(info['rounds_won'])
 
-
-            # print(info)
+        # Evaluar el daño restante al final del round
+        if frame_window_counter > 0:
+            if damage_acumulado_en_ventana > 0:
+                fitness += damage_acumulado_en_ventana
+                print("Recompensa asignada al final")
+            else:
+                fitness -= 50
+                print("Castigo asignado al final")
 
         genome.fitness = fitness
         env.close()

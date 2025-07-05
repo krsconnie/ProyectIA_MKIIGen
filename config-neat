@@ -1,7 +1,7 @@
 [NEAT]
 fitness_criterion     = max
-fitness_threshold     = 5000
-pop_size              = 10
+fitness_threshold     = 50000000000
+pop_size              = 25
 reset_on_extinction   = False
 
 [DefaultGenome]
@@ -31,15 +31,18 @@ weight_init_stdev     = 1.0
 weight_max_value      = 30
 weight_min_value      = -30
 weight_mutate_power   = 0.5
-weight_mutate_rate    = 0.8
+# Esto es probabilidad de que un peso de la red mute en cada gen, si es alto, hay mucha exploración y ayuda a escapar de mínimos locales
+weight_mutate_rate    = 0.9
 weight_replace_rate   = 0.1
 
 compatibility_disjoint_coefficient = 1.0
 compatibility_weight_coefficient = 0.5
 
-conn_add_prob         = 0.5
+# Prob de añadir una nueva conexión entre nodos, define densidad, si es muy alto puede haber mucho ruido
+conn_add_prob         = 0.4
 conn_delete_prob      = 0.3
-node_add_prob         = 0.2
+# Prob de añadir nuevo nodo en la red, aumenta la complejidad. Si es más alta podría ayudar a aprender patrones (posibles combos)
+node_add_prob         = 0.1
 node_delete_prob      = 0.2
 
 enabled_default       = True
@@ -55,13 +58,16 @@ response_replace_rate   = 0.0
 
 
 [DefaultSpeciesSet]
+# Define la separación genética entre "especies"
 compatibility_threshold = 3.0
 
 [DefaultStagnation]
 species_fitness_func  = max
+# Número de gens que una especie sobrevive sin mejorar, si se pasa la matan. evita especies que ya no mejoran
 max_stagnation        = 15
 species_elitism       = 2
 
 [DefaultReproduction]
-elitism               = 2
+# Número de mejores genomas copiados sin cambio a la siguiente gen
+elitism               = 4
 survival_threshold    = 0.2

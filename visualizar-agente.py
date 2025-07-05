@@ -28,7 +28,8 @@ def jugar_con_agente(config_file, genoma_file):
     net = neat.nn.FeedForwardNetwork.create(genome, config)
 
     # Crear entorno con renderizado
-    env = retro.make(game="MortalKombatII-Genesis", render_mode="human")
+    env = retro.make(game="MortalKombatII-Genesis", state="Level1.LiuKangVsJax",
+                     render_mode="human")
     obs = env.reset()[0]
 
     total_reward = 0
