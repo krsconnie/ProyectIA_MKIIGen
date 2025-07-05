@@ -26,29 +26,36 @@ Los colores van desde el rojo (muy bajo), hasta el azul (muy alto).
 En un numero se representa el fitness promedio de los mapas y en cuadrados 
 los resultados individuales de cada mapa.
 
-Ejemplo:
+Ejemplo con 5 mapas:
 🧬 Genoma 230, fitness:   -76.09   ■ ■ ■ ■ ■
 🧬 Genoma 232, fitness:  -114.34   ■ ■ ■ ■ ■
 🧬 Genoma 237, fitness:   101.72   ■ ■ ■ ■ ■
+
+Ejemplo con 2 mapas:
+🧬 Genoma 230, fitness:   -76.09   ■ ■
+🧬 Genoma 232, fitness:  -114.34   ■ ■
+🧬 Genoma 237, fitness:   101.72   ■ ■
 """
-def print_genoma_eval(genome, allfitness):
-    def fitness_color(fitness, string=None) :
+def print_genoma_eval(genome, allfitness, min_max):
+    def fitness_color(fitness, min_max, string=None) :
         RED = "\033[91m"
         ORANGE = "\033[38;5;208m"
         YELLOW = "\033[38;5;220m"
         GREEN = "\033[92m"
         CYAN = "\033[96m"
         BLUE = "\033[94m"
+        min, max = min_max
+        seg = (max - min)/6
 
-        if fitness <= -80:
+        if fitness <= (min + seg):
             color = RED
-        elif fitness <= -40:
+        elif fitness <= (min + 2*seg):
             color = ORANGE
-        elif fitness <= 0:
+        elif fitness <= (min + 3*seg):
             color = YELLOW
-        elif fitness <= 40:
+        elif fitness <= (min + 4*seg):
             color = GREEN
-        elif fitness <= 80:
+        elif fitness <= (min + 5*seg):
             color = CYAN
         else:
             color = BLUE
@@ -56,7 +63,7 @@ def print_genoma_eval(genome, allfitness):
             return f"{color}{string}\033[0m"
         return f"{color}{fitness:>9.2f}\033[0m"
     
-    print(f"🧬 Genoma {genome.key}, fitness: {fitness_color(genome.fitness)} " + " ".join(fitness_color(f, string="■") for f in allfitness))
+    print(f"🧬 Genoma {genome.key}, fitness: {fitness_color(genome.fitness, min_max)} " + " ".join(fitness_color(f, min_max, string="■") for f in allfitness))
 
 
 """
@@ -96,6 +103,7 @@ def ask_config():
                         print("Error al cargar checkpoint.", e)
                         sys.exit(1)
                 else:
+                    CARGAR_CHECKPOINT = False
                     print("No hay checkpoints disponibles. Se empezará desde cero.")
         elif default == "n":
             GENERACIONES = -1
@@ -114,7 +122,7 @@ def ask_config():
             THREADS = -1
             while THREADS < 1:
                 try:
-                    THREADS = input("¿Cuántos threads quieres utlizar? (>0, 'd' para default): ")
+                    THREADS = input("¿Cuántos threads quieres utlizar? (1-16, 'd' para default): ")
                     if THREADS == 'd':
                         THREADS = config.THREADS
                         continue
@@ -127,7 +135,7 @@ def ask_config():
             CANTIDAD_MAPAS_A_ENTRENAR = -1
             while CANTIDAD_MAPAS_A_ENTRENAR < 1:
                 try:
-                    CANTIDAD_MAPAS_A_ENTRENAR = input("¿Cuántos mapas quieres entrenar? (>0, 'd' para default): ")
+                    CANTIDAD_MAPAS_A_ENTRENAR = input("¿Cuántos mapas quieres entrenar? (1-14, 'd' para default): ")
                     if CANTIDAD_MAPAS_A_ENTRENAR == 'd':
                         CANTIDAD_MAPAS_A_ENTRENAR = config.CANTIDAD_MAPAS_A_ENTRENAR
                         continue
@@ -140,7 +148,7 @@ def ask_config():
             FRAME_SKIP = -1
             while FRAME_SKIP < 1:
                 try:
-                    FRAME_SKIP = input("¿Cuánto de frame skip quieres que haya? (>0, 'd' para default): ")
+                    FRAME_SKIP = input("¿Cuánto de frame skip quieres que haya? (1-4, 'd' para default): ")
                     if FRAME_SKIP == 'd':
                         FRAME_SKIP = config.FRAME_SKIP
                         continue
@@ -203,30 +211,36 @@ def ask_config():
         print("🔝 Comenzando... Esto puede tardar unos segundos...")
         return (GENERACIONES, THREADS, NOMBRE_MEJOR_AGENTE, CARPETA_CHECKPOINTS, CARGAR_CHECKPOINT, CHECKPOINT)
     
+"""
+Explica el programa.
+"""
+def help():
+    print("""
+    🧬 \033[1mBienvenido a la evolución.\033[0m
+          
+    Te explico todo muy rápido.
+          
+    En \033[3mmain.py\033[0m encontrarás comentados y seccionados los principales métodos.
+          
+    El más importante es \033[32mlifes\033[0m.\033[33mlet_there_be_life()\033[0m, este inicia el entrenamiento según
+    las configuraciones asignadas en config-neat y en \033[3mlifes_laws/config.py\033[0m.
+    En este último están todas las configuraciones realacionadas a los entrenamientos: cuantos hilos a la vez, 
+    cuantas generaciones, el frame skip, donde se gaurdaran los checkpoints, entre otras.
+    
+    Puedes configurarlas ahi, aunque cuando ejecutes \033[32mlifes\033[0m.\033[33mlet_there_be_life()\033[0m, este te 
+    preguntará si quieres usar las configuraciones default o no. Si marcas que no, te hara preguntas sobre las configuraciones 
+    para asignarlas.
+          
+    Por otro lado tenemos a \033[32mlifes\033[0m.\033[33mjugar_humano()\033[0m con ella poder jugar tu encontra de los bots base 
+    del juego. Esto es util para encontrar problemas, identificar puntos criticos, etc.
+        
+    Tambien esta \033[32mlifes\033[0m.\033[33mjugar_agente()\033[0m, como es de esperar, con esta podras utilizar el mejor agente 
+    guardado hasta la fecha, deberas espesificarlo.
 
-
-class RenderRequestReporter(neat.reporting.BaseReporter):
-    def __init__(self):
-        pass
-
-    def start_generation(self, generation):
-        print(f"\n🧠 ¿Renderizar la generación {generation}? (s/n) [5s]: ", end="", flush=True)
-        config.RENDER_MODE = None
-
-        def get_input():
-            try:
-                answer = input()
-                if answer.strip().lower() == "s":
-                    config.RENDER_MODE = "human"
-                    print("✔️ Renderizando generación.")
-                else: 
-                    config.RENDER_MODE = None
-                    print("\n⏱️ Continuando sin render.")
-
-            except:
-                pass
-
-        thread = threading.Thread(target=get_input)
-        thread.daemon = True
-        thread.start()
-        thread.join(timeout=5)
+    Si lo que quieres es ajustar el fitness, deberas ir a \033[3mlifes_laws/fitness.py\033[0m, ahí encontraras la que probablemente es 
+    la función más importante de todo. Si la lees un poco, encontrarás la seccion donde debes ajustar el fitness.
+          
+    Creo que eso es todo, muchas gracias por leer y espero que les sea de utilidad. ✨
+    
+          
+""")
