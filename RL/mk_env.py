@@ -51,7 +51,7 @@ class MortalKombatEnv(gym.Env):
             state=estado_random,
             players=1,
             scenario='scenario'
-            ,render_mode = False
+            #,render_mode = False
         )
 
 
