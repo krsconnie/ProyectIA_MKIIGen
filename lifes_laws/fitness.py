@@ -20,7 +20,7 @@ def fitness_funtion(tiempo_vivo, combinaciones, total_botones, spam_penalty, rep
         - promedio_botones * 0.05
     )
 
-    return max(fitness, 0)  # evitamos fitness negativos
+    return fitness  # evitamos fitness negativos
 
 """
 De lo más importante del NEAT, la evaluacion de los genomas.
@@ -122,7 +122,7 @@ def eval_genome(genome, config):
 
         
 
-        avg_fitness[i_escn] = fitness_funtion(frame_count - warmup_frames, combinaciones=combinaciones, total_botones=total_botones, repeticiones=repeticiones)
+        avg_fitness[i_escn] = fitness_funtion(frame_count - warmup_frames, combinaciones=combinaciones, spam_penalty=spam_penalty, total_botones=total_botones, repeticiones=repeticiones)
 
         env.close()
 

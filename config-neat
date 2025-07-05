@@ -11,7 +11,7 @@ num_hidden            = 0
 feed_forward          = True
 
 ; Ideal poder comenzar con partial, pero no deja por alguna razón
-initial_connection    = unconnected
+initial_connection    = full
 
 node_add_prob         = 0.3
 node_delete_prob      = 0.2
