@@ -3,6 +3,7 @@ import pickle
 import neat
 import numpy as np
 import cv2
+import random
 
 def preprocess(obs):
     image = obs[0]
@@ -31,6 +32,13 @@ def jugar_con_agente(config_file, genoma_file):
     env = retro.make(game="MortalKombatII-Genesis", state="Level1.LiuKangVsJax",
                      render_mode="human")
     obs = env.reset()[0]
+
+    # Ruido inicial para romper simetrías
+    for _ in range(random.randint(30, 120)):
+        obs, _, terminated, truncated, _ = env.step(env.action_space.sample())
+        if terminated or truncated:
+            obs = env.reset()[0]
+
 
     total_reward = 0
     frame_count = 0
