@@ -147,8 +147,9 @@ class MortalKombatEnv(gym.Env):
             else:
                 self.no_atack_steps = 0
 
-            if self.no_atack_steps >= 20:
-                reward -= 0.05
+            if self.no_atack_steps >= 10:
+                reward -= 0.06
+                print(f"PTO NO HACE NADA {self.no_atack_steps}")
 
         # Por cada step en que reciba daño, descuento de 0.2. Si bloquea, solo se le descuenta 0.15
         if damage_to_Player > 0:
