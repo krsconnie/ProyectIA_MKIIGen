@@ -12,4 +12,4 @@ life.help()
 
 # TESTS
 #test.jugar_humano(mapa="LiuKangVsLiuKang_VeryHard_06")
-#test.jugar_agente(genoma_file="generaciones/mejor_agente.pkl" ,mapa="LiuKangVsLiuKang_VeryHard_06")
+test.jugar_agente(genoma_file="generaciones_v7/agente.pkl" ,mapa="Level1.JaxVsLiuKang")
