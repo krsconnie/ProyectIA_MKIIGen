@@ -9,7 +9,7 @@ class MortalKombatEnv(gym.Env):
         super().__init__()
 
         # Creación de env en base a mapas aleatorios
-        self.posibles_estados = [f"VeryEasy.LiuKang-{i:02d}" for i in range(2, 3)]
+        self.posibles_estados = [f"VeryEasy.LiuKang-{i:02d}" for i in range(2, 6)]
         self.env = None
         self._crear_nuevo_env()
         
@@ -147,10 +147,10 @@ class MortalKombatEnv(gym.Env):
             else:
                 self.no_atack_steps = 0
 
-            if self.no_atack_steps >= 50:
+            if self.no_atack_steps >= 20:
                 reward -= 0.05
 
-        # Por cada step en que reciba daño, descuento de 0.2. Si bloquea, solo se le descuenta 0.14
+        # Por cada step en que reciba daño, descuento de 0.2. Si bloquea, solo se le descuenta 0.15
         if damage_to_Player > 0:
             self.damage_to_player_steps += 1
             reward -= 0.2 + (damage_to_Player/120)
