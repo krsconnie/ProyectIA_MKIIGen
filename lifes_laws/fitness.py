@@ -8,24 +8,31 @@ import random
 """
 De lo más importante del NEAT, la evaluacion de los genomas.
 """
+
+FRAMES_PARA_COMBO = 15
+
+def detecta_combo(historial, combos, permitido="q"):
+    for combo in combos:
+        i = 0
+        for mov in historial:
+            if mov == combo[i]:
+                i += 1
+                if i == len(combo):
+                    return True
+            elif mov != permitido:
+                i = 0
+    return False
+
 def eval_genome(genome, config):
 
-    escenarios_disponibles = [
-        "Level1.JaxVsBaraka",
-        "Level1.JaxVsLiuKang"
-    ]
+    avg_fitness = [0] * exe_config.CANTIDAD_MAPAS_A_ENTRENAR
 
-    avg_fitness = [0] * len(escenarios_disponibles)
-
-    for i_escn, escenario in enumerate(escenarios_disponibles):
+    for i_escn in range(exe_config.CANTIDAD_MAPAS_A_ENTRENAR):
+        escenario = f"Level1.LiuKangVsJax"
         env = retro.make(game='MortalKombatII-Genesis', state=escenario, render_mode=exe_config.RENDER_MODE)
         obs, info = env.reset()
         net = neat.nn.FeedForwardNetwork.create(genome, config)
 
-        INDICES_BOTONES = [env.buttons.index(b) for b in exe_config.BOTONES_USADOS]
-        action = [0] * len(env.buttons)
-
-        # Inicializando variables.
         done = False
         frame_count = 0
         max_frames = 4500
@@ -33,7 +40,6 @@ def eval_genome(genome, config):
         last_enemy_health = 120
         last_player_health = 120
 
-        # Variables nuevas para fitness complejo
         ventana_frames = 45
         frame_window_counter = 0
         damage_acumulado_en_ventana = 0
@@ -41,16 +47,17 @@ def eval_genome(genome, config):
         umbral_penalizaciones = 7
 
         fitness = 0
+        historial_acciones = []
 
         while not done and frame_count < max_frames:
             if frame_count < warmup_frames:
-                action = env.action_space.sample()
+                pre_action = random.choice(list(exe_config.MOVIMIENTOS_BASE.values()))
+                action = list(pre_action)
                 last_enemy_health = info.get("enemy_health", last_enemy_health)
                 last_player_health = info.get("health", last_player_health)
             else:
                 max_x_pos = 320.0
                 max_y_pos = 224.0
-
                 pos_data = [
                     info.get("x_position", 0) / max_x_pos,
                     info.get("y_position", 0) / max_y_pos,
@@ -61,9 +68,26 @@ def eval_genome(genome, config):
                 input_data = np.concatenate([obs_processed, pos_data])
                 output = net.activate(input_data)
 
-                action = [0] * len(env.buttons)
-                for i, idx in enumerate(INDICES_BOTONES):
-                    action[idx] = 1 if output[i] > 0.5 else 0
+                action = [0] * 8
+                for i in range(8):
+                    action[i] = 1 if output[i] > 0.5 else 0
+
+            # Guardar movimiento para validar combos
+            nombre_mov = None
+            for k, v in exe_config.MOVIMIENTOS_BASE.items():
+                if list(action) == list(v):
+                    nombre_mov = k
+                    break
+            if nombre_mov is None:
+                nombre_mov = "otro"
+
+            historial_acciones.append(nombre_mov)
+            if len(historial_acciones) > FRAMES_PARA_COMBO:
+                historial_acciones.pop(0)
+
+            if detecta_combo(historial_acciones, exe_config.COMBOS_JAX):
+                fitness += 1000
+                historial_acciones = []
 
             for _ in range(exe_config.FRAME_SKIP):
                 obs, _, terminated, truncated, info = env.step(action)
@@ -78,7 +102,6 @@ def eval_genome(genome, config):
                 enemy_damage = max(0, last_enemy_health - enemy_health)
                 self_damage = max(0, last_player_health - player_health)
 
-                # --- Recompensas estilo ataque.py ---
                 frame_window_counter += 1
                 damage_acumulado_en_ventana += enemy_damage
 
@@ -110,7 +133,6 @@ def eval_genome(genome, config):
                     done = True
                     break
 
-        # Suma el daño restante si la ventana no se completó
         if frame_window_counter > 0:
             if damage_acumulado_en_ventana > 0:
                 fitness += damage_acumulado_en_ventana * ((damage_acumulado_en_ventana / ventana_frames) * 100)
