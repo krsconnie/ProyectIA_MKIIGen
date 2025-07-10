@@ -27,6 +27,9 @@ class CustomCSVReporter:
 
     def end_generation(self, config, population, species_set):
         pass
+    
+    def species_stagnant(self, sid, species):
+        pass
 
 
 

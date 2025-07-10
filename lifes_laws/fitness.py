@@ -28,7 +28,7 @@ def eval_genome(genome, config):
     avg_fitness = [0] * exe_config.CANTIDAD_MAPAS_A_ENTRENAR
 
     for i_escn in range(exe_config.CANTIDAD_MAPAS_A_ENTRENAR):
-        escenario = f"Level1.LiuKangVsJax"
+        escenario = f"Level1.JaxVsBaraka"
         env = retro.make(game='MortalKombatII-Genesis', state=escenario, render_mode=exe_config.RENDER_MODE)
         obs, info = env.reset()
         net = neat.nn.FeedForwardNetwork.create(genome, config)
@@ -48,6 +48,7 @@ def eval_genome(genome, config):
 
         fitness = 0
         historial_acciones = []
+        frames_sin_combo = 0  # Contador para limpiar historial cada 1s (~15 frames)
 
         while not done and frame_count < max_frames:
             if frame_count < warmup_frames:
@@ -72,7 +73,7 @@ def eval_genome(genome, config):
                 for i in range(8):
                     action[i] = 1 if output[i] > 0.5 else 0
 
-            # Guardar movimiento para validar combos
+            # --- Registrar movimiento para combos ---
             nombre_mov = None
             for k, v in exe_config.MOVIMIENTOS_BASE.items():
                 if list(action) == list(v):
@@ -85,10 +86,20 @@ def eval_genome(genome, config):
             if len(historial_acciones) > FRAMES_PARA_COMBO:
                 historial_acciones.pop(0)
 
+            # --- Verificar combo ---
             if detecta_combo(historial_acciones, exe_config.COMBOS_JAX):
                 fitness += 1000
+                print("COMBO LOGRADO")
                 historial_acciones = []
+                frames_sin_combo = 0  # Reset contador tras combo
 
+            # --- Contador para limpiar historial cada ~1s ---
+            frames_sin_combo += 1
+            if frames_sin_combo >= FRAMES_PARA_COMBO:
+                historial_acciones = []
+                frames_sin_combo = 0
+
+            # --- Simulación con frameskip ---
             for _ in range(exe_config.FRAME_SKIP):
                 obs, _, terminated, truncated, info = env.step(action)
                 done = terminated or truncated
@@ -111,7 +122,7 @@ def eval_genome(genome, config):
                         if penalizaciones_seguidas > 0:
                             penalizaciones_seguidas -= 1
                     else:
-                        fitness -= 50
+                        fitness -= 60
                         penalizaciones_seguidas += 1
 
                     frame_window_counter = 0
@@ -132,6 +143,7 @@ def eval_genome(genome, config):
                 if info.get("rounds_won", 0) != 0 or info.get("enemy_rounds_won", 0) != 0:
                     done = True
                     break
+
 
         if frame_window_counter > 0:
             if damage_acumulado_en_ventana > 0:
