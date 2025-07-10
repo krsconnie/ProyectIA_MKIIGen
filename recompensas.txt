@@ -1,0 +1,290 @@
+
+
+FITNESS 1
+
+def eval_genome(genome, config):
+    avg_fitness = [0] * exe_config.CANTIDAD_MAPAS_A_ENTRENAR
+    avg_damage = [0] * exe_config.CANTIDAD_MAPAS_A_ENTRENAR
+
+    for i_escn in range(exe_config.CANTIDAD_MAPAS_A_ENTRENAR):
+        escenario = f"Level1.LiuKangVsJax"
+        env = retro.make(game='MortalKombatII-Genesis', state=escenario, render_mode=exe_config.RENDER_MODE)
+        obs, info = env.reset()
+        net = neat.nn.FeedForwardNetwork.create(genome, config)
+
+        done = False
+        frame_count = 0
+        max_frames = 4500
+        warmup_frames = 200
+
+        last_enemy_health = 120
+        last_player_health = 120
+
+        fitness = 0
+        total_enemy_damage = 0
+
+        while not done and frame_count < max_frames:
+            if frame_count < warmup_frames:
+                action = list(random.choice(list(exe_config.MOVIMIENTOS_BASE.values())))
+            else:
+                pos_data = [
+                    info.get("x_position", 0) / 320.0,
+                    info.get("y_position", 0) / 224.0,
+                    info.get("enemy_x_position", 0) / 320.0,
+                    info.get("enemy_y_position", 0) / 224.0
+                ]
+                obs_processed = tools.preprocess(obs)
+                input_data = np.concatenate([obs_processed, pos_data])
+                output = net.activate(input_data)
+                action = [1 if o > 0.5 else 0 for o in output]
+
+            if any(action[0:3]):
+                fitness += 2
+
+            for _ in range(exe_config.FRAME_SKIP):
+                obs, _, terminated, truncated, info = env.step(action)
+                done = terminated or truncated
+                frame_count += 1
+                if done:
+                    break
+
+                enemy_health = info.get("enemy_health", last_enemy_health)
+                player_health = info.get("health", last_player_health)
+
+                enemy_damage = max(0, last_enemy_health - enemy_health)
+                self_damage = max(0, last_player_health - player_health)
+
+                total_enemy_damage += enemy_damage
+
+                if enemy_damage > 0:
+                    fitness += enemy_damage * 2.0
+                if self_damage > 0:
+                    fitness -= self_damage
+
+                last_enemy_health = enemy_health
+                last_player_health = player_health
+
+                if info.get("rounds_won", 0) != 0 or info.get("enemy_rounds_won", 0) != 0:
+                    done = True
+                    break
+
+        env.close()
+        avg_fitness[i_escn] = fitness
+        avg_damage[i_escn] = total_enemy_damage
+
+    genome.fitness = sum(avg_fitness) / len(avg_fitness)
+    genome.prom_damage = sum(avg_damage) / len(avg_damage)
+    return genome.fitness
+
+
+
+FITNESS 2
+
+def eval_genome(genome, config):
+    avg_fitness = [0] * exe_config.CANTIDAD_MAPAS_A_ENTRENAR
+    avg_damage = [0] * exe_config.CANTIDAD_MAPAS_A_ENTRENAR
+
+    for i_escn in range(exe_config.CANTIDAD_MAPAS_A_ENTRENAR):
+        escenario = f"Level1.LiuKangVsJax"
+        env = retro.make(game='MortalKombatII-Genesis', state=escenario, render_mode=exe_config.RENDER_MODE)
+        obs, info = env.reset()
+        net = neat.nn.FeedForwardNetwork.create(genome, config)
+
+        done = False
+        frame_count = 0
+        max_frames = 4500
+        warmup_frames = 200
+
+        last_enemy_health = 120
+        last_player_health = 120
+
+        ventana_frames = 45
+        frame_window_counter = 0
+        damage_acumulado_en_ventana = 0
+
+        fitness = 0
+        total_enemy_damage = 0
+
+        while not done and frame_count < max_frames:
+            if frame_count < warmup_frames:
+                action = list(random.choice(list(exe_config.MOVIMIENTOS_BASE.values())))
+            else:
+                pos_data = [
+                    info.get("x_position", 0) / 320.0,
+                    info.get("y_position", 0) / 224.0,
+                    info.get("enemy_x_position", 0) / 320.0,
+                    info.get("enemy_y_position", 0) / 224.0
+                ]
+                obs_processed = tools.preprocess(obs)
+                input_data = np.concatenate([obs_processed, pos_data])
+                output = net.activate(input_data)
+                action = [1 if o > 0.5 else 0 for o in output]
+
+            if any(action[0:3]):
+                fitness += 2
+
+            for _ in range(exe_config.FRAME_SKIP):
+                obs, _, terminated, truncated, info = env.step(action)
+                done = terminated or truncated
+                frame_count += 1
+                if done:
+                    break
+
+                enemy_health = info.get("enemy_health", last_enemy_health)
+                player_health = info.get("health", last_player_health)
+
+                enemy_damage = max(0, last_enemy_health - enemy_health)
+                self_damage = max(0, last_player_health - player_health)
+
+                total_enemy_damage += enemy_damage
+
+                frame_window_counter += 1
+                damage_acumulado_en_ventana += enemy_damage
+
+                if frame_window_counter >= ventana_frames:
+                    if damage_acumulado_en_ventana > 0:
+                        fitness += 150
+                    else:
+                        fitness -= 50
+                    frame_window_counter = 0
+                    damage_acumulado_en_ventana = 0
+
+                if enemy_damage > 0:
+                    fitness += enemy_damage * 2.0
+                if self_damage > 0:
+                    fitness -= self_damage
+
+                last_enemy_health = enemy_health
+                last_player_health = player_health
+
+                if info.get("rounds_won", 0) != 0 or info.get("enemy_rounds_won", 0) != 0:
+                    done = True
+                    break
+
+        env.close()
+        avg_fitness[i_escn] = fitness
+        avg_damage[i_escn] = total_enemy_damage
+
+    genome.fitness = sum(avg_fitness) / len(avg_fitness)
+    genome.prom_damage = sum(avg_damage) / len(avg_damage)
+    return genome.fitness
+
+
+
+
+FITNESS 3
+
+
+def eval_genome(genome, config):
+    avg_fitness = [0] * exe_config.CANTIDAD_MAPAS_A_ENTRENAR
+    avg_damage = [0] * exe_config.CANTIDAD_MAPAS_A_ENTRENAR
+
+    for i_escn in range(exe_config.CANTIDAD_MAPAS_A_ENTRENAR):
+        escenario = f"Level1.LiuKangVsJax"
+        env = retro.make(game='MortalKombatII-Genesis', state=escenario, render_mode=exe_config.RENDER_MODE)
+        obs, info = env.reset()
+        net = neat.nn.FeedForwardNetwork.create(genome, config)
+
+        done = False
+        frame_count = 0
+        max_frames = 4500
+        warmup_frames = 200
+
+        last_enemy_health = 120
+        last_player_health = 120
+
+        ventana_frames = 45
+        frame_window_counter = 0
+        damage_acumulado_en_ventana = 0
+
+        historial_acciones = []
+
+        fitness = 0
+        total_enemy_damage = 0
+
+        while not done and frame_count < max_frames:
+            if frame_count < warmup_frames:
+                action = list(random.choice(list(exe_config.MOVIMIENTOS_BASE.values())))
+            else:
+                pos_data = [
+                    info.get("x_position", 0) / 320.0,
+                    info.get("y_position", 0) / 224.0,
+                    info.get("enemy_x_position", 0) / 320.0,
+                    info.get("enemy_y_position", 0) / 224.0
+                ]
+                obs_processed = tools.preprocess(obs)
+                input_data = np.concatenate([obs_processed, pos_data])
+                output = net.activate(input_data)
+                action = [1 if o > 0.5 else 0 for o in output]
+
+            if any(action[0:3]):
+                fitness += 2
+
+            # Guardar para combos
+            nombre_mov = None
+            for k, v in exe_config.MOVIMIENTOS_BASE.items():
+                if list(action) == list(v):
+                    nombre_mov = k
+                    break
+            if nombre_mov is None:
+                nombre_mov = "otro"
+
+            historial_acciones.append(nombre_mov)
+            if len(historial_acciones) > FRAMES_PARA_COMBO:
+                historial_acciones.pop(0)
+
+            if detecta_combo(historial_acciones, exe_config.COMBOS_JAX):
+                fitness += 1000
+                historial_acciones = []
+
+            for _ in range(exe_config.FRAME_SKIP):
+                obs, _, terminated, truncated, info = env.step(action)
+                done = terminated or truncated
+                frame_count += 1
+                if done:
+                    break
+
+                enemy_health = info.get("enemy_health", last_enemy_health)
+                player_health = info.get("health", last_player_health)
+
+                enemy_damage = max(0, last_enemy_health - enemy_health)
+                self_damage = max(0, last_player_health - player_health)
+
+                total_enemy_damage += enemy_damage
+
+                frame_window_counter += 1
+                damage_acumulado_en_ventana += enemy_damage
+
+                if frame_window_counter >= ventana_frames:
+                    if damage_acumulado_en_ventana > 0:
+                        fitness += 150
+                    else:
+                        fitness -= 50
+                    frame_window_counter = 0
+                    damage_acumulado_en_ventana = 0
+
+                if enemy_damage > 0:
+                    fitness += enemy_damage * 2.0
+                if self_damage > 0:
+                    fitness -= self_damage
+
+                last_enemy_health = enemy_health
+                last_player_health = player_health
+
+                if info.get("rounds_won", 0) != 0:
+                    fitness += 2000
+                    done = True
+                    break
+                if info.get("enemy_rounds_won", 0) != 0:
+                    fitness -= 500
+                    done = True
+                    break
+
+        env.close()
+        avg_fitness[i_escn] = fitness
+        avg_damage[i_escn] = total_enemy_damage
+
+    genome.fitness = sum(avg_fitness) / len(avg_fitness)
+    genome.prom_damage = sum(avg_damage) / len(avg_damage)
+    return genome.fitness
+

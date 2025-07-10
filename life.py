@@ -4,6 +4,8 @@ import os
 import lifes_laws
 from neat.parallel import ParallelEvaluator
 import csv_reporter
+import damage_csv_reporter
+
 
 
 """
@@ -36,7 +38,9 @@ def let_there_be_life(config_file = "config-neat"):
     population.add_reporter(neat.StatisticsReporter())
     population.add_reporter(neat.Checkpointer(generation_interval=10, filename_prefix=f"{CARPETA_CHECKPOINTS}/generacion-")) # Se guardan checkpoints cada 10 generaciones.
     population.add_reporter(csv_reporter.CustomCSVReporter('historial.csv'))
+    population.add_reporter(damage_csv_reporter.DamageCSVReporter('historial_damage.csv'))
     pe = ParallelEvaluator(THREADS, lifes_laws.eval_genome)
+    
 
     # Iniciamos neat.
     winner = population.run(pe.evaluate, n=GENERACIONES)
