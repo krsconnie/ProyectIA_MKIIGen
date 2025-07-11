@@ -28,6 +28,9 @@ class DamageCSVReporter:
     def end_generation(self, config, population, species_set):
         pass
 
+    def species_stagnant(self, sid, species):
+        pass
+
     def post_evaluate(self, config, population, species, best_genome):
         # Extraer prom_damage de cada genoma
         damages = [

@@ -74,6 +74,8 @@ def eval_genome(genome, config):
 
     genome.fitness = sum(avg_fitness) / len(avg_fitness)
     genome.prom_damage = sum(avg_damage) / len(avg_damage)
+    fitness_range = (-120, 120)
+    tools.print_genoma_eval(genome, avg_fitness, fitness_range)
     return genome.fitness
 
 
@@ -167,6 +169,8 @@ def eval_genome(genome, config):
 
     genome.fitness = sum(avg_fitness) / len(avg_fitness)
     genome.prom_damage = sum(avg_damage) / len(avg_damage)
+    fitness_range = (-120, 120)
+    tools.print_genoma_eval(genome, avg_fitness, fitness_range)
     return genome.fitness
 
 
@@ -286,5 +290,7 @@ def eval_genome(genome, config):
 
     genome.fitness = sum(avg_fitness) / len(avg_fitness)
     genome.prom_damage = sum(avg_damage) / len(avg_damage)
+    fitness_range = (-120, 120)
+    tools.print_genoma_eval(genome, avg_fitness, fitness_range)
     return genome.fitness
 
