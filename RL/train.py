@@ -9,7 +9,7 @@ from reward_logger_callback import RewardLoggerCallback
 from datetime import datetime
 
 def main():
-    num_procesos = min(multiprocessing.cpu_count(), 5)
+    num_procesos = min(multiprocessing.cpu_count(), 4)
     print(f"Usando {num_procesos} procesos para entrenar...")
 
     # Crear carpetas si no existen
@@ -19,7 +19,7 @@ def main():
     env = SubprocVecEnv([lambda: MortalKombatEnv() for _ in range(num_procesos)])
 
     model_path = "./RL/ppo_mk_model"
-    log_name = datetime.now().strftime("PPO_%d-%m___%H-%M_VeryEasy-02")
+    log_name = datetime.now().strftime("PPO_%d-%m___%H-%M_Mapa_Aleatorio_2_7_")
 
     if os.path.exists(f"{model_path}.zip"):
         print("Cargando modelo base existente y continuando entrenamiento...")
@@ -50,7 +50,7 @@ def main():
 
     print("Comenzando entrenamiento...")
     model.learn(
-        total_timesteps= 100_000 * num_procesos,
+        total_timesteps= 7_000_000,
         callback=callback_list,
         reset_num_timesteps=False,
         tb_log_name=log_name
