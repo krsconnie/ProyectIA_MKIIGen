@@ -61,7 +61,7 @@ def print_genoma_eval(genome, allfitness, min_max):
             color = BLUE
         if string != None:
             return f"{color}{string}\033[0m"
-        return f"{color}{fitness:>9.2f}\033[0m"
+        return f"{color}{fitness:>9.5f}\033[0m"
     
     print(f"🧬 Genoma {genome.key}, fitness: {fitness_color(genome.fitness, min_max)} " + " ".join(fitness_color(f, min_max, string="■") for f in allfitness))
 
@@ -244,3 +244,23 @@ def help():
     
           
 """)
+    
+import os
+
+class FitnessLogger(neat.reporting.BaseReporter):
+    def __init__(self, filename="fitness.txt", gen_actual=0):
+        self.filename = filename
+        self.generacion_actual = gen_actual  # 👈 la llevamos nosotros
+
+        if not os.path.exists(self.filename):
+            with open(self.filename, "w") as f:
+                f.write("Generacion,PromedioFitness\n")
+
+    def post_evaluate(self, config, population, species, best_genome):
+        fitnesses = [genome.fitness for genome in population.values()]
+        avg_fitness = sum(fitnesses) / len(fitnesses)
+
+        with open(self.filename, "a") as f:
+            f.write(f"{self.generacion_actual},{avg_fitness:.4f}\n")
+
+        self.generacion_actual += 1  # 👈 incrementamos al final de cada generación

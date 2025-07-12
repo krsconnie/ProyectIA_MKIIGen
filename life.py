@@ -33,6 +33,7 @@ def let_there_be_life(config_file = "config-neat"):
     population.add_reporter(neat.StdOutReporter(True))
     population.add_reporter(neat.StatisticsReporter())
     population.add_reporter(neat.Checkpointer(generation_interval=10, filename_prefix=f"{CARPETA_CHECKPOINTS}/generacion-")) # Se guardan checkpoints cada 10 generaciones.
+    population.add_reporter(lifes_laws.FitnessLogger(f"{CARPETA_CHECKPOINTS}/fitness.txt", gen_actual=83))
     pe = ParallelEvaluator(THREADS, lifes_laws.eval_genome)
 
     # Iniciamos neat.

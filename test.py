@@ -8,6 +8,7 @@ import time
 import random
 import lifes_laws
 import pygame
+import lifes_laws
 
 # Mapeo de teclas a botones del emulador
 KEY_TO_BUTTON = {
@@ -76,7 +77,7 @@ def jugar_humano(mapa=None):
         ##################################################################################
 
         # Aqui va el fitness que quieras ajustar para tener referencia
-
+        print(math.sqrt((info.get("enemy_x_position", 0) - info.get("x_position", 0))**2 + (info.get("enemy_y_position", 0) - info.get("y_position", 0))**2))
         ##################################################################################
         ##################################################################################
         ##################################################################################
@@ -116,8 +117,7 @@ def jugar_agente(genoma_file,  mapa=None, config_file="config-neat"):
     obs, info = env.reset()
     net = neat.nn.FeedForwardNetwork.create(genome, config)
 
-    INDICES_BOTONES = [env.buttons.index(b) for b in lifes_laws.BOTONES_USADOS]
-    action = [0] * len(env.buttons)
+    action = [0] * len(lifes_laws.config.BOTONES_USADOS)
 
     fitness = 0
     frame_count = 0
@@ -126,11 +126,14 @@ def jugar_agente(genoma_file,  mapa=None, config_file="config-neat"):
     last_enemy_health = 120
     last_player_health = 120
     max_frames = 4500
+    done = False
 
+    while not done and frame_count < max_frames:
 
-    while not (terminated or truncated) and frame_count < max_frames:
-        max_x_pos = 320.0
-        max_y_pos = 224.0
+        max_x_pos = 320.0   # Máxima posicion X en el mapa
+        max_y_pos = 224.0   # Máxima posicion Y en el mapa
+        
+        # pos_data contiene la ubicación de del agente y del enemigo
         pos_data = [
             info.get("x_position", 0) / max_x_pos,
             info.get("y_position", 0) / max_y_pos,
@@ -138,35 +141,58 @@ def jugar_agente(genoma_file,  mapa=None, config_file="config-neat"):
             info.get("enemy_y_position", 0) / max_y_pos
         ]
         obs_processed = lifes_laws.tools.preprocess(obs)
-        input_data = np.concatenate([obs_processed, pos_data])
-        output = net.activate(input_data)
+        input_data = np.concatenate([obs_processed, pos_data]) # Juntamos la obs con pos_data
+        output = net.activate(input_data)   # La activamos, para esto tuvimos que subir las neuronas input de 7056 a 7060
 
-        action = [0] * len(env.buttons)
-        for i, idx in enumerate(INDICES_BOTONES):
-            action[idx] = 1 if output[i] > 0.5 else 0
-        obs, _, terminated, truncated, info = env.step(action)
+        for i in range(8):
+            action[i] = 1 if output[i] > 0.5 else 0
 
-        enemy_health = info.get("enemy_health", last_enemy_health)
-        player_health = info.get("health", last_player_health)
+        #if tuple(action) in exe_config.MOVIMIENTOS_BASE:
+            #avg_fitness[i_escn] += 1
+            #if exe_config.MOVIMIENTOS_BASE[tuple(action)] not  in acciones_utilizadas:
+                #acciones_utilizadas.add(exe_config.MOVIMIENTOS_BASE[tuple(action)])
+                #avg_fitness[i_escn] += 200
+            #ultimas_acciones.append((exe_config.MOVIMIENTOS_BASE[tuple(action)], frame_count))
 
-        enemy_damage = max(0, last_enemy_health - enemy_health)
-        self_damage = max(0, last_player_health - player_health)
 
-        ##################################################################################
-        ################################# Fitness adjust #################################
-        ##################################################################################
+        # distancia = math.sqrt((info.get("enemy_x_position", 0) - info.get("x_position", 0))**2 + (info.get("enemy_y_position", 0) - info.get("y_position", 0))**2)
 
-        # Aqui va el fitness que quieras ajustar para tener referencia
-
-        ##################################################################################
-        ##################################################################################
-        ##################################################################################
+        # if 100 < distancia < 150:
+        #     avg_fitness[i_escn] += 1
+        # else:
+        #     avg_fitness[i_escn] -= 1
         
 
+        # Mantenemos la acción por la cantidad de frames indicada en FRAME_SKIP. Esto hace hasta (FRAME_SKIP - 1) veces más rapido el entrenamiento
+        for _ in range(lifes_laws.config.FRAME_SKIP):
+            obs, _, terminated, truncated, info = env.step(action)
+            done = terminated or truncated
 
-        last_enemy_health = enemy_health
-        last_player_health = player_health
-        frame_count += 1
+            # También aumentamos el contador por cada frame saltado
+            frame_count += 1
+            if done or frame_count >= max_frames: 
+                break
+
+            # 👇 Procesamiento de daño dentro del loop skip (opcional)
+            enemy_health = info.get("enemy_health", last_enemy_health)
+            player_health = info.get("health", last_player_health)
+
+            enemy_damage = max(0, last_enemy_health - enemy_health)
+            self_damage = max(0, last_player_health - player_health)
+            
+            #avg_fitness[i_escn] += 1
+            fitness += enemy_damage
+            fitness -= self_damage
+
+            last_enemy_health = enemy_health
+            last_player_health = player_health
+
+            if info.get("rounds_won", 0) != 0 or info.get("enemy_rounds_won", 0) != 0:
+                done = True
+                break
+
+    fitness += 120
 
     env.close()
+    
     print(f"\n🎮 Partida terminada | Recompensa total: {fitness} | Cuadros jugados: {frame_count}")

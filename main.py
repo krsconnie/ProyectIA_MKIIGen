@@ -5,11 +5,11 @@ import test
 # AYUDA
 #life.help()
 
+if input("E, para entrenar: ") == "E":
+    # EVOLUCION
+    life.let_there_be_life(config_file="config-neat")
 
-# EVOLUCION
-life.let_there_be_life(config_file="config-neat")
-
-
+else:
 # TESTS
-#test.jugar_humano(mapa="LiuKangVsLiuKang_VeryHard_06")
-#test.jugar_agente(genoma_file="generaciones/mejor_agente.pkl" ,mapa="LiuKangVsLiuKang_VeryHard_06")
+    #test.jugar_humano(mapa="Level1.LiuKangVsJax.state")
+    test.jugar_agente(genoma_file="generaciones_v1/mejor_agente.pkl" ,mapa="Level1.LiuKangVsJax.state")

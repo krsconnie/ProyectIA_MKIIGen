@@ -7,11 +7,11 @@ reset_on_extinction   = False
 [DefaultGenome]
 num_inputs            = 7060
 num_outputs           = 8
-num_hidden            = 0
+num_hidden            = 20
 feed_forward          = True
 
 ; Ideal poder comenzar con partial, pero no deja por alguna razón
-initial_connection    = full
+initial_connection    = partial_nodirect 0.8
 
 node_add_prob         = 0.3
 node_delete_prob      = 0.2
@@ -21,9 +21,9 @@ conn_delete_prob      = 0.2
 compatibility_disjoint_coefficient = 1.0
 compatibility_weight_coefficient   = 0.5
 
-activation_default       = tanh
+activation_default       = sigmoid
 activation_mutate_rate   = 0.0
-activation_options       = tanh
+activation_options       = sigmoid
 
 aggregation_default      = sum
 aggregation_mutate_rate  = 0.0
