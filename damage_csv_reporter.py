@@ -1,5 +1,7 @@
 import csv
 import os
+from lifes_laws.damage_store import damage_store
+
 
 class DamageCSVReporter:
     def __init__(self, filename):
@@ -32,9 +34,8 @@ class DamageCSVReporter:
         pass
 
     def post_evaluate(self, config, population, species, best_genome):
-        # Extraer prom_damage de cada genoma
         damages = [
-            getattr(genome, 'prom_damage', 0)
+            damage_store.get(genome.key, 0)
             for genome in population.values()
         ]
 

@@ -2,6 +2,7 @@
 
 FITNESS 1
 
+
 def eval_genome(genome, config):
     avg_fitness = [0] * exe_config.CANTIDAD_MAPAS_A_ENTRENAR
     avg_damage = [0] * exe_config.CANTIDAD_MAPAS_A_ENTRENAR
@@ -74,13 +75,16 @@ def eval_genome(genome, config):
 
     genome.fitness = sum(avg_fitness) / len(avg_fitness)
     genome.prom_damage = sum(avg_damage) / len(avg_damage)
+    damage_store[genome.key] = genome.prom_damage
     fitness_range = (-120, 120)
     tools.print_genoma_eval(genome, avg_fitness, fitness_range)
     return genome.fitness
 
 
 
+
 FITNESS 2
+
 
 def eval_genome(genome, config):
     avg_fitness = [0] * exe_config.CANTIDAD_MAPAS_A_ENTRENAR
@@ -169,6 +173,7 @@ def eval_genome(genome, config):
 
     genome.fitness = sum(avg_fitness) / len(avg_fitness)
     genome.prom_damage = sum(avg_damage) / len(avg_damage)
+    damage_store[genome.key] = genome.prom_damage
     fitness_range = (-120, 120)
     tools.print_genoma_eval(genome, avg_fitness, fitness_range)
     return genome.fitness
@@ -176,8 +181,23 @@ def eval_genome(genome, config):
 
 
 
+
 FITNESS 3
 
+
+FRAMES_PARA_COMBO = 15
+
+def detecta_combo(historial, combos, permitido="q"):
+    for combo in combos:
+        i = 0
+        for mov in historial:
+            if mov == combo[i]:
+                i += 1
+                if i == len(combo):
+                    return True
+            elif mov != permitido:
+                i = 0
+    return False
 
 def eval_genome(genome, config):
     avg_fitness = [0] * exe_config.CANTIDAD_MAPAS_A_ENTRENAR
@@ -290,6 +310,7 @@ def eval_genome(genome, config):
 
     genome.fitness = sum(avg_fitness) / len(avg_fitness)
     genome.prom_damage = sum(avg_damage) / len(avg_damage)
+    damage_store[genome.key] = genome.prom_damage
     fitness_range = (-120, 120)
     tools.print_genoma_eval(genome, avg_fitness, fitness_range)
     return genome.fitness

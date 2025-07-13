@@ -4,6 +4,8 @@ import neat
 import retro
 import numpy as np
 import random
+from lifes_laws.damage_store import damage_store
+
 
 """
 De lo más importante del NEAT, la evaluacion de los genomas.
@@ -45,8 +47,6 @@ def eval_genome(genome, config):
         frame_window_counter = 0
         damage_acumulado_en_ventana = 0
 
-        historial_acciones = []
-
         fitness = 0
         total_enemy_damage = 0
 
@@ -67,23 +67,6 @@ def eval_genome(genome, config):
 
             if any(action[0:3]):
                 fitness += 2
-
-            # Guardar para combos
-            nombre_mov = None
-            for k, v in exe_config.MOVIMIENTOS_BASE.items():
-                if list(action) == list(v):
-                    nombre_mov = k
-                    break
-            if nombre_mov is None:
-                nombre_mov = "otro"
-
-            historial_acciones.append(nombre_mov)
-            if len(historial_acciones) > FRAMES_PARA_COMBO:
-                historial_acciones.pop(0)
-
-            if detecta_combo(historial_acciones, exe_config.COMBOS_JAX):
-                fitness += 1000
-                historial_acciones = []
 
             for _ in range(exe_config.FRAME_SKIP):
                 obs, _, terminated, truncated, info = env.step(action)
@@ -119,12 +102,7 @@ def eval_genome(genome, config):
                 last_enemy_health = enemy_health
                 last_player_health = player_health
 
-                if info.get("rounds_won", 0) != 0:
-                    fitness += 2000
-                    done = True
-                    break
-                if info.get("enemy_rounds_won", 0) != 0:
-                    fitness -= 500
+                if info.get("rounds_won", 0) != 0 or info.get("enemy_rounds_won", 0) != 0:
                     done = True
                     break
 
@@ -134,6 +112,7 @@ def eval_genome(genome, config):
 
     genome.fitness = sum(avg_fitness) / len(avg_fitness)
     genome.prom_damage = sum(avg_damage) / len(avg_damage)
+    damage_store[genome.key] = genome.prom_damage
     fitness_range = (-120, 120)
     tools.print_genoma_eval(genome, avg_fitness, fitness_range)
     return genome.fitness
